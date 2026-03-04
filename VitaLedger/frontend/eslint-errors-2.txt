@@ -1,0 +1,22 @@
+
+C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\src\pages\Dashboard.jsx
+  25:12  error  'uploadData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-unused-vars
+  25:24  error  'setUploadData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+  63:9   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  61 |             return;
+  62 |         }
+> 63 |         setRole(r);
+     |         ^^^^^^^ Avoid calling setState() directly within an effect
+  64 |
+  65 |         const fetchData = async () => {
+  66 |             try {  react-hooks/set-state-in-effect
+
+Γ£û 3 problems (3 errors, 0 warnings)
+

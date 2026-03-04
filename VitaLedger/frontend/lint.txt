@@ -1,0 +1,19 @@
+
+> frontend@0.0.0 lint
+> eslint .
+
+
+C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\src\pages\AIPredictions.jsx
+  9:18  error  'setRole' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\src\pages\AdminPanel.jsx
+  9:18  error  'setRole' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\src\pages\BlockchainStatus.jsx
+  9:18  error  'setRole' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\src\pages\Records.jsx
+  9:18  error  'setRole' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+Γ£û 4 problems (4 errors, 0 warnings)
+
