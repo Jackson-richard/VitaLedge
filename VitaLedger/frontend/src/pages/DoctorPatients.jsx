@@ -7,9 +7,12 @@ import RecordCard from '../components/RecordCard';
 import StatusBadge from '../components/StatusBadge';
 import { Search, ShieldCheck, FileText, Activity, User } from 'lucide-react';
 import { recordService } from '../services/recordService';
+import { fetchPatientByABHA } from '../services/patientService';
 import { toast } from 'react-hot-toast';
+import api from '../services/api'; // Use our pre-configured axios instance
 
 const DoctorPatients = () => {
+    console.log("DoctorPatients component loaded");
     const navigate = useNavigate();
     const [role] = useState(() => localStorage.getItem('role') || '');
     const [userId] = useState(() => localStorage.getItem('user_id') || '');
@@ -19,6 +22,7 @@ const DoctorPatients = () => {
     const [consentStatus, setConsentStatus] = useState(null); // 'approved', 'pending', 'denied', or null
     const [patientHistory, setPatientHistory] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [searchError, setSearchError] = useState(null);
 
     // Form State
     const [uploadData, setUploadData] = useState({
@@ -48,28 +52,27 @@ const DoctorPatients = () => {
         setPatientProfile(null);
         setConsentStatus(null);
         setPatientHistory([]);
+        setSearchError(null);
 
         try {
-            // 1. Fetch Profile (No consent needed now)
-            const profile = await recordService.getProfile(searchAbha);
+            // Always fetch fresh patient data from backend
+            const res = await fetchPatientByABHA(searchAbha);
+            const profile = res.data;
             setPatientProfile(profile);
+            console.log("Fetched patient profile:", profile);
 
-            // 2. Check Consent Status (Find if doctor has an active consent request)
-            const consents = await recordService.getMyConsentRequests();
-            const activeConsent = consents.find(c => c.patient_id === searchAbha);
-
-            if (activeConsent) {
-                setConsentStatus(activeConsent.status);
-                // 3. If approved, fetch history
-                if (activeConsent.status === 'approved') {
-                    fetchPatientHistory(searchAbha);
-                }
-            } else {
-                setConsentStatus(null); // No request sent yet
+            // Check consent status
+            const statusRes = await recordService.checkConsentStatus(userId, searchAbha);
+            const status = statusRes.status;
+            setConsentStatus(status);
+            console.log("Consent status:", status);
+            if (status === 'approved') {
+                fetchPatientHistory(searchAbha);
             }
-
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Patient profile not found");
+            setSearchError(err.message || "Error fetching patient profile");
+            console.error(err);
+            toast.error(err.message || "Patient profile not found");
         } finally {
             setIsSearching(false);
         }
@@ -88,6 +91,7 @@ const DoctorPatients = () => {
     const handleRequestAccess = async () => {
         try {
             await recordService.requestConsent(searchAbha);
+            console.log("Consent request sent");
             toast.success("Consent request sent to patient");
             setConsentStatus('pending');
         } catch (err) {
@@ -99,27 +103,75 @@ const DoctorPatients = () => {
         }
     };
 
-    const handleDiagnosisSubmit = async (e) => {
-        e.preventDefault();
+    const handleRefreshStatus = async () => {
+        if (!searchAbha) return;
+        try {
+            const statusRes = await recordService.checkConsentStatus(userId, searchAbha);
+            const status = statusRes.status;
+            console.log("Consent status:", status);
+            setConsentStatus(status);
+            if (status === 'approved') {
+                fetchPatientHistory(searchAbha);
+            }
+        } catch (err) {
+            toast.error("Failed to refresh status");
+        }
+    };
+
+    const handleSubmitRecord = async (e) => {
+        e.preventDefault(); // prevent form reload
+        console.log("Submit button clicked");
+
         if (consentStatus !== 'approved') {
             toast.error("You need approved consent to submit a diagnosis");
             return;
         }
+        if (!patientProfile) {
+            toast.error("No patient selected");
+            return;
+        }
+
+        const medicationsArray = uploadData.medications.split(',').map(m => m.trim()).filter(m => m);
+        const payload = {
+  patient_id: patientProfile.abha_id || "unknown",
+
+  demographics: {
+    age: patientProfile.age,
+    gender: patientProfile.gender,
+    height: patientProfile.height,
+    weight: patientProfile.weight
+  },
+
+  symptoms: patientProfile.symptoms || "",
+
+  diagnosis: uploadData.diagnosis || "",
+
+  medications: medicationsArray || [],
+
+  progress_notes: uploadData.progress_notes || "",
+
+  billing: {
+    consultation: Number(uploadData.billing.consultation),
+    tests: Number(uploadData.billing.tests)
+  },
+
+  followup_date: uploadData.followup_date || ""
+};
+        console.log("Submitting payload:", payload);
 
         try {
-            const medicationsArray = uploadData.medications.split(',').map(m => m.trim()).filter(m => m);
-            await recordService.uploadRecord(searchAbha, {
-                diagnosis: uploadData.diagnosis,
-                medications: medicationsArray,
-                progress_notes: uploadData.progress_notes,
-                billing: {
-                    consultation: Number(uploadData.billing.consultation),
-                    tests: Number(uploadData.billing.tests)
-                },
-                followup_date: uploadData.followup_date
-            });
-
-            toast.success("Diagnosis submitted and encrypted securely");
+            // Using the api instance which points to 127.0.0.1:8000 and has the Bearer token
+            const res = await api.post(
+                "/records/upload",
+                payload,
+                {
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            }
+        );
+            console.log("Success:", res.data);
+            toast.success("Diagnosis submitted and encrypted securely!");
             setUploadData({
                 diagnosis: '',
                 medications: '',
@@ -127,14 +179,12 @@ const DoctorPatients = () => {
                 billing: { consultation: '', tests: '' },
                 followup_date: ''
             });
-
-            // Refresh history
             fetchPatientHistory(searchAbha);
-
         } catch (err) {
-            toast.error(err.response?.data?.detail || "Failed to submit record");
+            console.error("Submit failed:", err.response?.data || err.message || err);
+            toast.error(err.response?.data?.detail || err.message || "Error submitting record");
         }
-    };
+    }
 
     if (role !== 'doctor') return null;
 
@@ -162,20 +212,32 @@ const DoctorPatients = () => {
                     {patientProfile && (
                         <Card title="Demographics & Triage" icon={User}>
                             <div className="grid grid-cols-2 gap-4 text-sm mb-6">
-                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Name</span>
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 col-span-2 sm:col-span-1">
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Patient Name</span>
                                     <span className="font-semibold text-slate-800">{patientProfile.name || 'Unknown'}</span>
                                 </div>
                                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Age & Gender</span>
-                                    <span className="font-semibold text-slate-800">{patientProfile.age} / {patientProfile.gender}</span>
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Phone</span>
+                                    <span className="font-semibold text-slate-800">{patientProfile.phone || 'N/A'}</span>
                                 </div>
                                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Vitals Info</span>
-                                    <span className="font-semibold text-slate-800">{patientProfile.height_cm || patientProfile.height} cm / {patientProfile.weight_kg || patientProfile.weight} kg</span>
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Age</span>
+                                    <span className="font-semibold text-slate-800">{patientProfile.age}</span>
+                                </div>
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Gender</span>
+                                    <span className="font-semibold text-slate-800">{patientProfile.gender}</span>
+                                </div>
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Height</span>
+                                    <span className="font-semibold text-slate-800">{patientProfile.height_cm || patientProfile.height} cm</span>
+                                </div>
+                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <span className="text-slate-500 text-xs font-bold uppercase tracking-wider block mb-1">Weight</span>
+                                    <span className="font-semibold text-slate-800">{patientProfile.weight_kg || patientProfile.weight} kg</span>
                                 </div>
                                 <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 col-span-2">
-                                    <span className="text-blue-600 text-xs font-bold uppercase tracking-wider block mb-1">Current Symptoms</span>
+                                    <span className="text-blue-600 text-xs font-bold uppercase tracking-wider block mb-1">Symptoms</span>
                                     <span className="font-semibold text-slate-800">{patientProfile.current_symptoms || patientProfile.symptoms || 'None reported'}</span>
                                 </div>
                             </div>
@@ -189,7 +251,7 @@ const DoctorPatients = () => {
                                     <ActionButton onClick={handleRequestAccess} variant="primary" icon={ShieldCheck}>Request Access</ActionButton>
                                 )}
                                 {consentStatus === 'pending' && (
-                                    <ActionButton variant="secondary" onClick={() => handleSearch()} icon={Activity}>Refresh Status</ActionButton>
+                                    <ActionButton variant="secondary" onClick={handleRefreshStatus} icon={Activity}>Refresh Status</ActionButton>
                                 )}
                             </div>
                         </Card>
@@ -200,9 +262,21 @@ const DoctorPatients = () => {
                 <div className="lg:col-span-7 space-y-6">
                     {!patientProfile ? (
                         <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm border-dashed">
-                            <Search size={48} className="text-slate-200 mb-4" />
-                            <h3 className="text-lg font-bold text-slate-700 mb-1">Enter ABHA ID</h3>
-                            <p className="text-sm text-slate-500 text-center max-w-sm">Search for a patient to load their demographics and request access to their clinical history.</p>
+                            {searchError ? (
+                                <>
+                                    <div className="text-red-500 mb-4 bg-red-50 p-3 rounded-full">
+                                        <Search size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-slate-700 mb-1">Patient Not Found</h3>
+                                    <p className="text-sm text-red-500 text-center max-w-sm font-medium">{searchError}</p>
+                                </>
+                            ) : (
+                                <>
+                                    <Search size={48} className="text-slate-200 mb-4" />
+                                    <h3 className="text-lg font-bold text-slate-700 mb-1">Enter ABHA ID</h3>
+                                    <p className="text-sm text-slate-500 text-center max-w-sm">Search for a patient to load their demographics and request access to their clinical history.</p>
+                                </>
+                            )}
                         </div>
                     ) : consentStatus !== 'approved' ? (
                         <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-8 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm border-dashed">
@@ -232,7 +306,7 @@ const DoctorPatients = () => {
 
                             {/* New Diagnosis Form */}
                             <Card title="Record New Diagnosis" icon={Activity}>
-                                <form onSubmit={handleDiagnosisSubmit} className="space-y-4">
+                                <div className="space-y-4">
                                     <div>
                                         <label className="block text-xs font-bold mb-1 text-slate-500 uppercase tracking-wide">Diagnosis</label>
                                         <input type="text" className="w-full px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-slate-50 focus:bg-white"
@@ -264,8 +338,15 @@ const DoctorPatients = () => {
                                             value={uploadData.followup_date} onChange={e => setUploadData({ ...uploadData, followup_date: e.target.value })} />
                                     </div>
 
-                                    <ActionButton type="submit" variant="demo" className="w-full" icon={ShieldCheck}>Encrypt & Submit to Ledger</ActionButton>
-                                </form>
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmitRecord}
+                                        className="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-slate-900 transition-colors"
+                                    >
+                                        <ShieldCheck size={20} />
+                                        Encrypt & Submit to Ledger
+                                    </button>
+                                </div>
                             </Card>
                         </>
                     )}

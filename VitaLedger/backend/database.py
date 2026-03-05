@@ -7,3 +7,4 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 client = MongoClient(MONGO_URI)
 db = client["vitaledger"]
+records_collection = db.records

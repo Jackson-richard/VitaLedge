@@ -9,7 +9,7 @@ import { recordService } from '../services/recordService';
 const Records = () => {
     const navigate = useNavigate();
     const [role] = useState(() => localStorage.getItem('role') || '');
-    const [userId] = useState(() => localStorage.getItem('user_id') || '');
+    const [abhaId] = useState(() => localStorage.getItem('abha_id') || '');
     const [patientRecords, setPatientRecords] = useState([]);
 
     useEffect(() => {
@@ -22,7 +22,7 @@ const Records = () => {
 
     const fetchRecords = async () => {
         try {
-            const pRecords = await recordService.getPatientRecords(userId);
+            const pRecords = await recordService.getPatientRecords(abhaId);
             setPatientRecords(pRecords || []);
         } catch (err) {
             console.error("Failed to fetch records", err);

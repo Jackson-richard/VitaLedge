@@ -1,0 +1,31 @@
+
+> frontend@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 26 modules transformed.
+Γ£ù Build failed in 672ms
+error during build:
+[vite:esbuild] Transform failed with 1 error:
+C:/Users/Jackson/OneDrive/Documents/Blockchain based EHR/VitaLedger/frontend/src/pages/DoctorPatients.jsx:94:10: ERROR: Expected ";" but found "catch"
+file: C:/Users/Jackson/OneDrive/Documents/Blockchain based EHR/VitaLedger/frontend/src/pages/DoctorPatients.jsx:94:10
+
+Expected ";" but found "catch"
+92 |                  fetchPatientHistory(searchAbha);
+93 |              }
+94 |          } catch (err) {
+   |            ^
+95 |              setSearchError("No patient profile found for this ABHA ID");
+96 |              console.error(err);
+
+    at failureErrorWithLog (C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\node_modules\esbuild\lib\main.js:1467:15)
+    at C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\node_modules\esbuild\lib\main.js:736:50
+    at responseCallbacks.<computed> (C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\node_modules\esbuild\lib\main.js:603:9)
+    at handleIncomingPacket (C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\node_modules\esbuild\lib\main.js:658:12)
+    at Socket.readFromStdout (C:\Users\Jackson\OneDrive\Documents\Blockchain based EHR\VitaLedger\frontend\node_modules\esbuild\lib\main.js:581:7)
+    at Socket.emit (node:events:518:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)

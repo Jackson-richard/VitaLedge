@@ -17,7 +17,7 @@ from utils.abha import generate_abha_id
 
 @router.post("/register", response_model=Token)
 async def register(user: UserRegistration):
-    if db.Users.find_one({"username": user.username}):
+    if db.users.find_one({"username": user.username}):
         raise HTTPException(status_code=400, detail="Username already exists")
     
     hashed_pwd = hash_password(user.password)
@@ -32,20 +32,32 @@ async def register(user: UserRegistration):
         "role": user.role,
         "abha_id": abha
     }
-    result = db.Users.insert_one(user_dict)
+    result = db.users.insert_one(user_dict)
     
     log_audit(str(result.inserted_id), "register", f"Registered new {user.role}")
     
-    token = signJWT(str(result.inserted_id), user.role)
-    return {"access_token": token, "token_type": "bearer", "role": user.role}
+    token = signJWT(str(result.inserted_id), user.role, abha)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": user.role,
+        "user_id": str(result.inserted_id),
+        "abha_id": abha
+    }
 
 @router.post("/login", response_model=Token)
 async def login(user: UserLogin):
-    db_user = db.Users.find_one({"username": user.username})
+    db_user = db.users.find_one({"username": user.username})
     if not db_user or not verify_password(user.password, db_user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     log_audit(str(db_user["_id"]), "login", "User logged in")
     
-    token = signJWT(str(db_user["_id"]), db_user["role"])
-    return {"access_token": token, "token_type": "bearer", "role": db_user["role"]}
+    token = signJWT(str(db_user["_id"]), db_user["role"], db_user.get("abha_id"))
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "role": db_user["role"],
+        "user_id": str(db_user["_id"]),
+        "abha_id": db_user.get("abha_id")
+    }

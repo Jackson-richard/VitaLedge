@@ -8,12 +8,13 @@ load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecretkey")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
-def signJWT(user_id: str, role: str):
+def signJWT(user_id: str, role: str, abha_id: str = None):
     payload = {
-        "user_id": user_id,
-        "role": role,
-        "expires": time.time() + 3600 * 24 # 24 hrs
-    }
+    "user_id": user_id,
+    "role": role,
+    "abha_id": abha_id,
+    "expires": time.time() + 3600 * 24
+}
     token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
     return token
 

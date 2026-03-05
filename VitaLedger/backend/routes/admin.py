@@ -22,7 +22,7 @@ async def verify_chain(current_user: dict = Depends(RoleChecker(["admin"]))):
         if current_block.block_hash != current_block.calculate_hash():
             return {"status": "tampered", "block_index": current_block.index, "reason": "Block hash mismatch"}
             
-        record = db.medical_records.find_one({"blockchain_hash": current_block.record_hash})
+        record = db.records.find_one({"blockchain_hash": current_block.record_hash})
         if not record:
             return {"status": "tampered", "block_index": current_block.index, "reason": "Record not found in database"}
             
@@ -39,12 +39,12 @@ async def tamper_record(data: dict, current_user: dict = Depends(RoleChecker(["a
     new_data = data.get("new_data", "TAMPERED DATA - HACKATHON DEMO")
     
     if not record_id:
-        record = db.medical_records.find_one()
+        record = db.records.find_one()
         if not record:
             raise HTTPException(status_code=404, detail="No records to tamper")
         record_id = str(record["_id"])
     
-    db.medical_records.update_one({"_id": ObjectId(record_id)}, {"$set": {"encrypted_data": new_data}})
+    db.records.update_one({"_id": ObjectId(record_id)}, {"$set": {"encrypted_data": new_data}})
     
     log_audit(current_user["user_id"], "tamper_record", f"Intentionally tampered record {record_id}")
     return {"message": "Record tampered successfully", "record_id": record_id}

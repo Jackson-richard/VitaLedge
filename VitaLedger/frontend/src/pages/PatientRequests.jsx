@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 const PatientRequests = () => {
     const navigate = useNavigate();
     const [role] = useState(() => localStorage.getItem('role') || '');
+    const [abhaId] = useState(() => localStorage.getItem('abha_id') || '');
     const [consents, setConsents] = useState([]);
 
     useEffect(() => {
@@ -23,7 +24,8 @@ const PatientRequests = () => {
 
     const fetchRequests = async () => {
         try {
-            const data = await recordService.getMyConsentRequests();
+            // patient abha_id is used for pulling consent
+            const data = await recordService.getPatientRequests(abhaId);
             setConsents(data || []);
         } catch (err) {
             console.error("Failed to fetch requests", err);
@@ -33,6 +35,7 @@ const PatientRequests = () => {
     const handleUpdateConsent = async (consentId, status) => {
         try {
             await recordService.updateConsent(consentId, status);
+            console.log("Consent status updated");
             toast.success(`Access request ${status}`);
             fetchRequests();
         } catch (err) {
@@ -57,18 +60,18 @@ const PatientRequests = () => {
                             {consents.map((c, i) => (
                                 <div key={i} className="p-5 bg-slate-50 hover:bg-white border border-slate-200 rounded-2xl flex items-center justify-between group transition-all hover:shadow-sm">
                                     <div>
-                                        <p className="font-bold text-slate-800 mb-1">Dr. {c.doctor_name}</p>
+                                        <p className="font-bold text-slate-800 mb-1">{c.doctor_name}</p>
                                         <StatusBadge status={c.status} />
                                     </div>
                                     <div className="flex gap-2">
                                         {c.status === 'pending' && (
                                             <>
-                                                <ActionButton variant="primary" onClick={() => handleUpdateConsent(c._id, 'approved')}>Authorize Node</ActionButton>
-                                                <ActionButton variant="secondary" onClick={() => handleUpdateConsent(c._id, 'denied')}>Reject</ActionButton>
+                                                <ActionButton variant="primary" onClick={() => handleUpdateConsent(c.request_id, 'approved')}>Authorize Node</ActionButton>
+                                                <ActionButton variant="secondary" onClick={() => handleUpdateConsent(c.request_id, 'denied')}>Reject</ActionButton>
                                             </>
                                         )}
                                         {c.status === 'approved' && (
-                                            <ActionButton variant="danger" onClick={() => handleUpdateConsent(c._id, 'denied')}>Revoke Decryption Key</ActionButton>
+                                            <ActionButton variant="danger" onClick={() => handleUpdateConsent(c.request_id, 'denied')}>Revoke Decryption Key</ActionButton>
                                         )}
                                     </div>
                                 </div>

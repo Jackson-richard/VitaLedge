@@ -22,6 +22,8 @@ const Login = () => {
 
             localStorage.setItem('token', res.access_token);
             localStorage.setItem('role', res.role);
+            if (res.user_id) localStorage.setItem('user_id', res.user_id);
+            if (res.abha_id) localStorage.setItem('abha_id', res.abha_id);
             navigate('/dashboard');
         } catch (err) {
             setError(err.response?.data?.detail || 'Authentication failed. Please check credentials.');

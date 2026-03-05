@@ -42,6 +42,7 @@ const Dashboard = () => {
     };
 
     const userId = getUserIdFromToken();
+    const abhaId = localStorage.getItem('abha_id');
 
     useEffect(() => {
         if (!role) {
@@ -60,9 +61,9 @@ const Dashboard = () => {
                         return;
                     }
                     try {
-                        const notifs = await recordService.getPatientNotifications(userId);
+                        const notifs = await recordService.getPatientNotifications(abhaId);
                         setNotifications(notifs);
-                        const pProfile = await recordService.getProfile(userId);
+                        const pProfile = await recordService.getProfile(abhaId);
                         if (pProfile) {
                             setPatientProfile(pProfile);
                         }
@@ -130,9 +131,8 @@ const Dashboard = () => {
     const handleSaveProfile = async (e) => {
         e.preventDefault();
         try {
-            const userId = getUserIdFromToken();
             await recordService.updateProfile({
-                abha_id: userId,
+                abha_id: abhaId,
                 name: patientProfile.name,
                 age: parseInt(patientProfile.age) || 0,
                 gender: patientProfile.gender,

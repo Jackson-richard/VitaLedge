@@ -1,4 +1,67 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from database import db
+from security.auth_bearer import RoleChecker, JWTBearer
+from security.encryption import encrypt_data, hash_data, decrypt_data
+from security.consent_guard import check_consent
+from utils.audit import log_audit
+from models.record import RecordUpload
+from blockchain.chain import ledger
+import json
+import time
+from utils.notifications import generate_followup_reminder, simulate_sms
+from services.ai_guidance import generate_ai_guidance
+from datetime import datetime, timedelta
+
+router = APIRouter(prefix="/records", tags=["records"], dependencies=[Depends(JWTBearer())])
+
+# --- New endpoint for bugfix: Encrypt & Submit to Ledger ---
+@router.post("/create")
+async def create_record(request: Request, current_user: dict = Depends(RoleChecker(["doctor"]))):
+    print("Received POST /create")
+    try:
+        body = await request.json()
+    except Exception as e:
+        print("Error parsing JSON:", e)
+        raise HTTPException(status_code=422, detail="Invalid JSON body")
+        
+    print("Payload received:", body)
+    
+    patient_abha = body.get("patient_abha")
+    print("Creating medical record for:", patient_abha)
+    # 1. Verify patient consent approval
+    check_consent(current_user["user_id"], patient_abha)
+
+    # 2. Encrypt the medical record
+    record_data = {
+        "patient_abha": patient_abha,
+        "doctor_id": current_user["user_id"],
+        "diagnosis": body.get("diagnosis"),
+        "medications": body.get("medications"),
+        "doctor_notes": body.get("doctor_notes"),
+        "billing": body.get("billing"),
+        "followup_date": body.get("followup_date"),
+        "created_at": time.time()
+    }
+    import json
+    data_str = json.dumps(record_data)
+    encrypted_data = encrypt_data(data_str)
+
+    # 3. Store encrypted record in MongoDB
+    record_hash = hash_data(encrypted_data)
+    record_doc = {**record_data, "blockchain_hash": record_hash, "encrypted_data": encrypted_data}
+    result = db.records.insert_one(record_doc)
+
+    # 4. Generate SHA256 hash of the record
+    # (already done above)
+
+    # 5. Append hash to blockchain ledger
+    ledger.add_block(record_hash, current_user["user_id"])
+    print("Hash added to blockchain:", record_hash)
+
+    print("Record created and submitted to ledger for patient:", patient_abha)
+    return {"message": "Record created and submitted to ledger", "record_id": str(result.inserted_id)}
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from database import db
 from security.auth_bearer import RoleChecker, JWTBearer
 from security.encryption import encrypt_data, hash_data, decrypt_data
@@ -22,7 +85,7 @@ async def upload_record(record: RecordUpload, current_user: dict = Depends(RoleC
     check_consent(doctor_id, patient_id)
     
     # Fetch Patient Profile for Auto-filling record
-    patient_profile = db.patient_profiles.find_one({"abha_id": patient_id})
+    patient_profile = db.patients.find_one({"abha_id": patient_id})
     if not patient_profile:
         # Fallback if profile not created yet
         demographics = {"age": 0, "gender": "Unknown", "height": 0, "weight": 0}
@@ -103,10 +166,11 @@ async def upload_record(record: RecordUpload, current_user: dict = Depends(RoleC
 async def get_records(patient_id: str, current_user: dict = Depends(RoleChecker(["patient", "doctor"]))):
     user_id = current_user["user_id"]
     role = current_user["role"]
-    
+    print("Current user object:", current_user)
+    print("Requested patient:", patient_id)
     if role == "doctor":
         check_consent(user_id, patient_id)
-    elif role == "patient" and user_id != patient_id:
+    elif role == "patient" and current_user.get("abha_id") != patient_id:
         raise HTTPException(status_code=403, detail="Cannot access other patient's records")
         
         
@@ -118,8 +182,7 @@ async def get_records(patient_id: str, current_user: dict = Depends(RoleChecker(
             current_hash = hash_data(r["encrypted_data"])
             integrity = "valid" if current_hash == r["blockchain_hash"] else "tampered"
             
-            # Since data is stored unencrypted in new schema, we can return it directly.
-            # But we maintain the structure expected by frontend (data node)
+            
             decrypted_records.append({
                 "record_id": str(r["_id"]),
                 "doctor_id": r["doctor_id"],
@@ -163,7 +226,7 @@ async def get_doctor_records(doctor_id: str, current_user: dict = Depends(RoleCh
     for r in records:
         try:
             patient_id = r.get("patient_abha")
-            consent = db.Consents.find_one({"doctor_id": doctor_id, "patient_id": patient_id})
+            consent = db.consent_requests.find_one({"doctor_id": doctor_id, "patient_abha": patient_id})
             if not consent or consent.get("status") != "approved":
                 continue 
                 
@@ -206,7 +269,7 @@ from bson import ObjectId
 @router.get("/{record_id}/export")
 async def export_record(record_id: str, current_user: dict = Depends(RoleChecker(["patient", "doctor", "admin"]))):
     try:
-        record = db.Records.find_one({"_id": ObjectId(record_id)})
+        record = db.records.find_one({"_id": ObjectId(record_id)})
         if not record:
             raise HTTPException(status_code=404, detail="Record not found")
             
@@ -214,9 +277,9 @@ async def export_record(record_id: str, current_user: dict = Depends(RoleChecker
         data_json = json.loads(data_str)
         
         export_data = {
-            "patient_id": record["patient_id"],
+            "patient_abha": record.get("patient_abha"),
             "doctor_id": record["doctor_id"],
-            "timestamp": record["timestamp"],
+            "timestamp": record.get("created_at"),
             "data": data_json
         }
         log_audit(current_user["user_id"], "export_record", f"Exported record {record_id}")
@@ -237,13 +300,13 @@ async def import_record(data: dict, current_user: dict = Depends(RoleChecker(["d
     record_hash = hash_data(encrypted_data)
     
     record_doc = {
-        "patient_id": patient_id,
+        "patient_abha": patient_id,
         "doctor_id": doctor_id,
         "encrypted_data": encrypted_data,
-        "record_hash": record_hash,
-        "timestamp": data.get("timestamp", time.time())
+        "blockchain_hash": record_hash,
+        "created_at": data.get("timestamp", time.time())
     }
-    result = db.Records.insert_one(record_doc)
+    result = db.records.insert_one(record_doc)
     
     ledger.add_block(record_hash, doctor_id)
     log_audit(doctor_id, "import_record", f"Imported record for patient {patient_id}")

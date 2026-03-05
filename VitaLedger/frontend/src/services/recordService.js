@@ -36,8 +36,12 @@ export const recordService = {
         const res = await api.put(`/consent/${consentId}/update`, { status });
         return res.data;
     },
-    getMyConsentRequests: async () => {
-        const res = await api.get('/consent/my-requests');
+    getPatientRequests: async (abhaId) => {
+        const res = await api.get(`/consent/requests/${abhaId}`);
+        return res.data;
+    },
+    checkConsentStatus: async (doctorId, abhaId) => {
+        const res = await api.get(`/consent/status/${doctorId}/${abhaId}`);
         return res.data;
     },
     getAuditLogs: async () => {

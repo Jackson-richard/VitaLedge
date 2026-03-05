@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from database import db
 from security.auth_bearer import RoleChecker, JWTBearer
+from bson import ObjectId
 
 router = APIRouter(prefix="/notifications", tags=["notifications"], dependencies=[Depends(JWTBearer())])
 
@@ -10,8 +11,11 @@ async def get_patient_notifications(patient_abha: str, current_user: dict = Depe
     user_id = current_user["user_id"]
     role = current_user["role"]
     
-    if role == "patient" and user_id != patient_abha:
-        return []
+    if role == "patient":
+        user_doc = db.users.find_one({"_id": ObjectId(user_id)})
+        user_abha = user_doc.get("abha_id") if user_doc else None
+        if user_abha != patient_abha:
+            return []
         
     notifications = list(db.patient_notifications.find({"patient_abha": patient_abha}).sort("created_at", -1))
     
