@@ -2,7 +2,6 @@ import requests
 
 base_url = "http://127.0.0.1:8000/auth"
 
-# Register
 print("Registering new test user...")
 reg_payload = {
     "username": "tester123",
@@ -12,7 +11,6 @@ reg_payload = {
 r1 = requests.post(f"{base_url}/register", json=reg_payload)
 print("Registration response:", r1.status_code, r1.text)
 
-# Login
 print("Logging in...")
 log_payload = {
     "username": "tester123",

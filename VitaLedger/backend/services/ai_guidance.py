@@ -2,7 +2,6 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# Load environment variables from .env file
 load_dotenv()
 
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -16,7 +15,7 @@ def generate_ai_guidance(diagnosis: str) -> str:
         return "No diagnosis provided."
         
     if not API_KEY or API_KEY == "AIzaSyBeOqa3mOftaQUa0Sf5sXjXBneTcUytW6g":
-        # Fallback for hackathon demo if key is just the example stub
+        
         return f"• Follow standard care plan for {diagnosis}.\n• Keep active daily.\n• Consult physician if symptoms worsen."
 
     try:

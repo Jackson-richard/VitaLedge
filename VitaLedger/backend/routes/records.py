@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/records", tags=["records"], dependencies=[Depends(JWTBearer())])
 
-# --- New endpoint for bugfix: Encrypt & Submit to Ledger ---
+
 @router.post("/create")
 async def create_record(request: Request, current_user: dict = Depends(RoleChecker(["doctor"]))):
     print("Received POST /create")
@@ -28,10 +28,10 @@ async def create_record(request: Request, current_user: dict = Depends(RoleCheck
     
     patient_abha = body.get("patient_abha")
     print("Creating medical record for:", patient_abha)
-    # 1. Verify patient consent approval
+    
     check_consent(current_user["user_id"], patient_abha)
 
-    # 2. Encrypt the medical record
+
     record_data = {
         "patient_abha": patient_abha,
         "doctor_id": current_user["user_id"],
@@ -46,15 +46,12 @@ async def create_record(request: Request, current_user: dict = Depends(RoleCheck
     data_str = json.dumps(record_data)
     encrypted_data = encrypt_data(data_str)
 
-    # 3. Store encrypted record in MongoDB
+    
     record_hash = hash_data(encrypted_data)
     record_doc = {**record_data, "blockchain_hash": record_hash, "encrypted_data": encrypted_data}
     result = db.records.insert_one(record_doc)
 
-    # 4. Generate SHA256 hash of the record
-    # (already done above)
-
-    # 5. Append hash to blockchain ledger
+    
     ledger.add_block(record_hash, current_user["user_id"])
     print("Hash added to blockchain:", record_hash)
 
@@ -84,10 +81,10 @@ async def upload_record(record: RecordUpload, current_user: dict = Depends(RoleC
     
     check_consent(doctor_id, patient_id)
     
-    # Fetch Patient Profile for Auto-filling record
+    
     patient_profile = db.patients.find_one({"abha_id": patient_id})
     if not patient_profile:
-        # Fallback if profile not created yet
+        
         demographics = {"age": 0, "gender": "Unknown", "height": 0, "weight": 0}
         symptoms = "Not provided"
     else:
@@ -101,10 +98,10 @@ async def upload_record(record: RecordUpload, current_user: dict = Depends(RoleC
 
     record_dict = record.model_dump()
     
-    # Generate AI Guidance
+    
     ai_guidance_text = generate_ai_guidance(record_dict["diagnosis"])
     
-    # Calculate Follow-up Date if not provided or to override
+    
     followup_date_str = record_dict.get("followup_date")
     if not followup_date_str:
         diag_lower = record_dict["diagnosis"].lower()
@@ -144,7 +141,7 @@ async def upload_record(record: RecordUpload, current_user: dict = Depends(RoleC
     
     result = db.records.insert_one(record_doc)
     
-    # Generate Notifications
+    
     combined_msg = f"Your doctor recorded a diagnosis of {record_dict['diagnosis']}. Lifestyle guidance: {ai_guidance_text}"
     if followup_date_str:
         combined_msg += f" Next follow-up: {followup_date_str}."

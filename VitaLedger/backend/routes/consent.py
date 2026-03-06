@@ -21,7 +21,7 @@ async def request_consent(data: dict, current_user: dict = Depends(RoleChecker([
         if existing["status"] in ["pending", "approved"]:
             return {"message": "Consent request already exists", "status": existing["status"]}
         else:
-            # If denied previously, update to pending rather than duplicating
+            
             db.consent_requests.update_one(
                 {"_id": existing["_id"]},
                 {"$set": {"status": "pending", "created_at": time.time()}}
@@ -56,7 +56,7 @@ async def update_consent(consent_id: str, data: dict, current_user: dict = Depen
     if not consent:
         raise HTTPException(status_code=404, detail="Consent request not found")
         
-    # Security: Ensure the person updating it is the patient requested
+    
     user = db.users.find_one({"_id": ObjectId(current_user["user_id"])})
     if not user or user.get("abha_id") != consent["patient_abha"]:
          raise HTTPException(status_code=403, detail="Not authorized to update this consent")
@@ -83,7 +83,7 @@ async def get_patient_requests(abha_id: str, current_user: dict = Depends(RoleCh
 
 @router.get("/status/{doctor_id}/{abha_id}")
 async def get_consent_status(doctor_id: str, abha_id: str):
-    # Retrieve the latest consent request for this doctor/patient combination
+    
     consent = db.consent_requests.find_one({"doctor_id": doctor_id, "patient_abha": abha_id}, sort=[("created_at", -1)])
     if consent:
         return {"status": consent["status"]}

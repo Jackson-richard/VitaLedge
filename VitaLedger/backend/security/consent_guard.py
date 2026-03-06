@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from database import db
 
 def check_consent(doctor_id: str, patient_id: str):
-    # patient_id is the ABHA ID based on where this is called from, e.g. records.py uses patient_id = record.patient_id which is ABHA
+    
     consent = db.consent_requests.find_one({"doctor_id": doctor_id, "patient_abha": patient_id}, sort=[("created_at", -1)])
     if not consent or consent.get("status") != "approved":
         raise HTTPException(status_code=403, detail="Patient consent required before accessing clinical records.")

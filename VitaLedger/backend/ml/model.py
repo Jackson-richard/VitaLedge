@@ -14,7 +14,7 @@ load_model()
 
 def predict_risk(age: float, bmi: float, bp: float, glucose: float) -> dict:
     if not model:
-        # Load it if the route is hit before it's loaded due to missing file initially
+        
         load_model()
         if not model:
             return {"error": "Model not loaded"}

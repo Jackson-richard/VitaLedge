@@ -14,23 +14,26 @@ const PatientRequests = () => {
     const [abhaId] = useState(() => localStorage.getItem('abha_id') || '');
     const [consents, setConsents] = useState([]);
 
-    useEffect(() => {
+ useEffect(() => {
         if (!role || role !== 'patient') {
             navigate('/dashboard');
             return;
         }
         fetchRequests();
     }, [navigate, role]);
-
+    
     const fetchRequests = async () => {
         try {
-            // patient abha_id is used for pulling consent
+            
             const data = await recordService.getPatientRequests(abhaId);
             setConsents(data || []);
         } catch (err) {
             console.error("Failed to fetch requests", err);
         }
     };
+       
+
+    
 
     const handleUpdateConsent = async (consentId, status) => {
         try {
@@ -39,6 +42,7 @@ const PatientRequests = () => {
             toast.success(`Access request ${status}`);
             fetchRequests();
         } catch (err) {
+            console.error(err);
             toast.error("Failed to update access request");
         }
     };

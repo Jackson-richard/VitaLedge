@@ -17,7 +17,7 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const [role] = useState(() => localStorage.getItem('role') || '');
 
-    // Data State
+    
     const [logs, setLogs] = useState([]);
     const [notifications, setNotifications] = useState([]);
 
@@ -52,10 +52,10 @@ const Dashboard = () => {
 
         const fetchData = async () => {
             try {
-                if (r === 'admin') {
+                if (role === 'admin') {
                     const adminLogs = await recordService.getAuditLogs();
                     setLogs(adminLogs || []);
-                } else if (r === 'patient') {
+                } else if (role === 'patient') {
                     if (!userId) {
                         navigate('/login');
                         return;
@@ -84,7 +84,7 @@ const Dashboard = () => {
         navigate('/login');
     };
 
-    // --- Admin Handlers ---
+    
     const handleVerifyChain = async () => {
         try {
             const data = await recordService.verifyChain();
@@ -99,7 +99,7 @@ const Dashboard = () => {
             await recordService.tamperRecord();
             alert("Database tampered! Run verification to detect it.");
             handleVerifyChain();
-            // Re-fetch logs for admin view
+            
             if (role === 'admin') {
                 const adminLogs = await recordService.getAuditLogs();
                 setLogs(adminLogs || []);
@@ -111,7 +111,7 @@ const Dashboard = () => {
 
 
 
-    // --- Patient Handlers ---
+
     const handlePredictRisk = async (e) => {
         e.preventDefault();
         try {
@@ -149,7 +149,7 @@ const Dashboard = () => {
         }
     };
 
-    // --- UI Renderers ---
+    
 
     const renderAdminView = () => (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500 ease-out fade-in">

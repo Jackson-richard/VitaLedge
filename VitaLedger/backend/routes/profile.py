@@ -12,7 +12,7 @@ async def update_patient_profile(profile: PatientProfile, current_user: dict = D
     user_id = current_user["user_id"]
     role = current_user["role"]
     
-    # Validation: only patients can update their own profile, or doctor if authorized (but usually patient)
+    
     if role == "patient":
         user_doc = db.users.find_one({"_id": ObjectId(user_id)})
         user_abha = user_doc.get("abha_id") if user_doc else None
@@ -22,7 +22,7 @@ async def update_patient_profile(profile: PatientProfile, current_user: dict = D
     profile_dict = profile.model_dump()
     profile_dict["created_at"] = time.time()
     
-    # Upsert the profile
+    
     result = db.patients.update_one(
         {"abha_id": profile.abha_id},
         {"$set": profile_dict},

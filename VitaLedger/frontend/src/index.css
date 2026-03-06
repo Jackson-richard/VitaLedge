@@ -11,7 +11,7 @@ body {
   @apply text-slate-800 antialiased bg-slate-50;
 }
 
-/* Custom Scrollbar for inner components */
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

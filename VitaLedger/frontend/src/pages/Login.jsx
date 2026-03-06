@@ -34,7 +34,7 @@ const Login = () => {
 
     return (
         <div className="flex items-center justify-center min-h-screen p-4 bg-slate-50 relative overflow-hidden">
-            {/* Background design elements */}
+            
             <div className="absolute top-0 w-full h-1/2 bg-blue-600 rounded-b-[100px] shadow-lg opacity-10"></div>
             <div className="absolute top-[20%] left-10 w-64 h-64 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
             <div className="absolute top-[10%] right-10 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>

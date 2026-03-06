@@ -4,8 +4,8 @@ from typing import Optional
 class UserRegistration(BaseModel):
     username: str
     password: str
-    role: str # "patient", "doctor", "admin"
-    abha_id: Optional[str] = None # Mainly for patient
+    role: str 
+    abha_id: Optional[str] = None 
 
 class UserLogin(BaseModel):
     username: str
