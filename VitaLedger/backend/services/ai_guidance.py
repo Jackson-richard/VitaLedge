@@ -14,7 +14,7 @@ def generate_ai_guidance(diagnosis: str) -> str:
     if not diagnosis:
         return "No diagnosis provided."
         
-    if not API_KEY or API_KEY == "AIzaSyBeOqa3mOftaQUa0Sf5sXjXBneTcUytW6g":
+    if not API_KEY :
         
         return f"• Follow standard care plan for {diagnosis}.\n• Keep active daily.\n• Consult physician if symptoms worsen."
 
