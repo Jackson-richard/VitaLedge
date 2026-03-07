@@ -9,7 +9,7 @@ import { Search, ShieldCheck, FileText, Activity, User } from 'lucide-react';
 import { recordService } from '../services/recordService';
 import { fetchPatientByABHA } from '../services/patientService';
 import { toast } from 'react-hot-toast';
-import api from '../services/api'; 
+import api from '../services/api';
 
 const DoctorPatients = () => {
     console.log("DoctorPatients component loaded");
@@ -19,12 +19,12 @@ const DoctorPatients = () => {
 
     const [searchAbha, setSearchAbha] = useState('');
     const [patientProfile, setPatientProfile] = useState(null);
-    const [consentStatus, setConsentStatus] = useState(null); 
+    const [consentStatus, setConsentStatus] = useState(null);
     const [patientHistory, setPatientHistory] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [searchError, setSearchError] = useState(null);
 
-    
+
     const [uploadData, setUploadData] = useState({
         diagnosis: '',
         medications: '',
@@ -55,13 +55,13 @@ const DoctorPatients = () => {
         setSearchError(null);
 
         try {
-            
+
             const res = await fetchPatientByABHA(searchAbha);
             const profile = res.data;
             setPatientProfile(profile);
             console.log("Fetched patient profile:", profile);
 
-            
+
             const statusRes = await recordService.checkConsentStatus(userId, searchAbha);
             const status = statusRes.status;
             setConsentStatus(status);
@@ -80,7 +80,7 @@ const DoctorPatients = () => {
 
     const fetchPatientHistory = async (abhaId) => {
         try {
-            
+
             const history = await recordService.getPatientRecords(abhaId);
             setPatientHistory(history || []);
         } catch (err) {
@@ -120,7 +120,7 @@ const DoctorPatients = () => {
     };
 
     const handleSubmitRecord = async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
         console.log("Submit button clicked");
 
         if (consentStatus !== 'approved') {
@@ -134,43 +134,43 @@ const DoctorPatients = () => {
 
         const medicationsArray = uploadData.medications.split(',').map(m => m.trim()).filter(m => m);
         const payload = {
-  patient_id: patientProfile.abha_id || "unknown",
+            patient_id: patientProfile.abha_id || "unknown",
 
-  demographics: {
-    age: patientProfile.age,
-    gender: patientProfile.gender,
-    height: patientProfile.height,
-    weight: patientProfile.weight
-  },
+            demographics: {
+                age: patientProfile.age,
+                gender: patientProfile.gender,
+                height: patientProfile.height,
+                weight: patientProfile.weight
+            },
 
-  symptoms: patientProfile.symptoms || "",
+            symptoms: patientProfile.symptoms || "",
 
-  diagnosis: uploadData.diagnosis || "",
+            diagnosis: uploadData.diagnosis || "",
 
-  medications: medicationsArray || [],
+            medications: medicationsArray || [],
 
-  progress_notes: uploadData.progress_notes || "",
+            progress_notes: uploadData.progress_notes || "",
 
-  billing: {
-    consultation: Number(uploadData.billing.consultation),
-    tests: Number(uploadData.billing.tests)
-  },
+            billing: {
+                consultation: Number(uploadData.billing.consultation),
+                tests: Number(uploadData.billing.tests)
+            },
 
-  followup_date: uploadData.followup_date || ""
-};
+            followup_date: uploadData.followup_date || ""
+        };
         console.log("Submitting payload:", payload);
 
         try {
-            
+
             const res = await api.post(
                 "/records/upload",
                 payload,
                 {
-                headers: {
-                    "Content-Type": "application/json"
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
                 }
-            }
-        );
+            );
             console.log("Success:", res.data);
             toast.success("Diagnosis submitted and encrypted securely!");
             setUploadData({
@@ -193,7 +193,7 @@ const DoctorPatients = () => {
         <PageLayout role={role} onLogout={handleLogout} title="Patient Management" subtitle="Search ABHA ID, request access, and record clinical diagnoses">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in slide-in-from-bottom-4 duration-500 ease-out fade-in">
 
-                
+
                 <div className="lg:col-span-5 space-y-6">
                     <Card title="Patient Lookup" icon={Search}>
                         <form onSubmit={handleSearch} className="flex gap-2 mb-2">
@@ -239,7 +239,11 @@ const DoctorPatients = () => {
                                 </div>
                                 <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 col-span-2">
                                     <span className="text-blue-600 text-xs font-bold uppercase tracking-wider block mb-1">Symptoms</span>
-                                    <span className="font-semibold text-slate-800">{patientProfile.current_symptoms || patientProfile.symptoms || 'None reported'}</span>
+                                    {consentStatus === 'approved' ? (
+                                        <span className="font-semibold text-slate-800">{patientProfile.current_symptoms || patientProfile.symptoms || 'None reported'}</span>
+                                    ) : (
+                                        <span className="font-semibold text-slate-500 italic flex items-center gap-1"><ShieldCheck size={14} /> 🔒 Clinical data hidden until patient approval</span>
+                                    )}
                                 </div>
                             </div>
 
@@ -259,7 +263,7 @@ const DoctorPatients = () => {
                     )}
                 </div>
 
-                
+
                 <div className="lg:col-span-7 space-y-6">
                     {!patientProfile ? (
                         <div className="h-full min-h-[400px] flex flex-col items-center justify-center p-8 bg-white border border-slate-200 rounded-2xl shadow-sm border-dashed">
@@ -287,7 +291,7 @@ const DoctorPatients = () => {
                         </div>
                     ) : (
                         <>
-                           
+
                             <Card title="Past Medical History" icon={FileText}>
                                 <div className="space-y-4 max-h-[300px] overflow-auto pr-2 custom-scrollbar">
                                     {patientHistory.map((r, i) => (
@@ -305,7 +309,7 @@ const DoctorPatients = () => {
                                 </div>
                             </Card>
 
-                          
+
                             <Card title="Record New Diagnosis" icon={Activity}>
                                 <div className="space-y-4">
                                     <div>

@@ -39,10 +39,10 @@ const RecordCard = ({ record, role = 'patient' }) => {
                     </p>
                 )}
 
-                {isDoctor && record.data?.billing && (
+                {record.data?.billing && (
                     <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2 rounded-lg border border-slate-100 mb-2">
-                        <p><span className="font-semibold text-slate-800">Consult Fee:</span> ₹{record.data.billing.consultation}</p>
-                        <p><span className="font-semibold text-slate-800">Test Cost:</span> ₹{record.data.billing.tests}</p>
+                        <p><span className="font-semibold text-slate-800">Consultation Fee:</span> ₹{record.data.billing.consultation || "Not specified"}</p>
+                        <p><span className="font-semibold text-slate-800">Test Cost:</span> ₹{record.data.billing.tests || "Not specified"}</p>
                     </div>
                 )}
 
