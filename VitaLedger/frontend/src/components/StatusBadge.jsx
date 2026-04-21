@@ -6,7 +6,7 @@ const StatusBadge = ({ status }) => {
     const isErr = normalizedStatus === 'tampered' || normalizedStatus === 'denied' || normalizedStatus.includes('tampering');
     const isPending = normalizedStatus === 'pending';
 
-    let bg = 'bg-slate-100 text-slate-700 border border-slate-200'; // Default
+    let bg = 'bg-slate-100 text-slate-700 border border-slate-200';
     if (isOk) bg = 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm';
     else if (isErr) bg = 'bg-red-100 text-red-800 border border-red-300 shadow-sm';
     else if (isPending) bg = 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm';
